@@ -3,6 +3,7 @@ import os
 import time
 import configparser
 import json
+from enum import Enum
 from typing import Dict, List
 
 from TopixCore30 import TopixCore30
@@ -153,21 +154,22 @@ def CheckUserAttribute(target_text: str, max_text_length: int) -> (Dict[str, flo
                 position[position_value] = 0
             position[position_value] += float(len(text)) / len(target_text)
 
-    # result = ''
-    # result += ('age: ' + str(sorted(age.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('civilstatus: ' + str(sorted(civilstatus.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('earnings' + str(sorted(earnings.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('gender' + str(sorted(gender.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('habit' + str(sorted(habit.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('hobby' + str(sorted(hobby.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('kind_of_business' + str(sorted(kind_of_business.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('kind_of_occupation' + str(sorted(kind_of_occupation.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('location' + str(sorted(location.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('moving' + str(sorted(moving.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('occupation' + str(sorted(occupation.items(), key=lambda x: -x[1])) + '\n')
-    # result += ('position' + str(sorted(position.items(), key=lambda x: -x[1])) + '\n')
-
     return (age, civilstatus, earnings, gender, habit, hobby, kind_of_business, kind_of_occupation, location, moving, occupation, position)
+
+
+class UserAttributeItem(Enum):
+    AGE = 'age'
+    CIVILSTATUS = 'civilstatus'
+    EARNINGS = 'earnings'
+    GENDER = 'gender'
+    HABIT = 'habit'
+    HOBBY = 'hobby'
+    KIND_OF_BUSINESS = 'kind_of_business'
+    KIND_OF_OCCUPATION = 'kind_of_occupation'
+    LOCATION = 'location'
+    MOVING = 'moving'
+    OCCUPATION = 'occupation'
+    POSITION = 'position'
 
 
 class UserAttribute:
@@ -232,51 +234,214 @@ class UserAttribute:
 
         return json_data
 
-    def GetUserAttributeAge(self) -> str:
-        if len(self.age) == 0:
+    def __GetTopItem(self, dictionary: Dict[str, float]) -> str:
+        if len(dictionary) == 0:
             return ''
-        sorted_age = sorted(self.__age.items(), key=lambda x: -x[1])
-        return list(sorted_age[0])[0]
+        sorted_dictionary = sorted(dictionary.items(), key=lambda x: -x[1])
+        return list(sorted_dictionary[0])[0]
+
+    def GetUserAttribute(self, user_attribute_item: UserAttributeItem) -> [str]:
+
+        if user_attribute_item == UserAttributeItem.AGE:
+            age = self.__GetTopItem(self.__age)
+            return [age] if len(age) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.CIVILSTATUS:
+            civilstatus = self.__GetTopItem(self.__civilstatus)
+            return [civilstatus] if len(civilstatus) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.EARNINGS:
+            earnings = self.__GetTopItem(self.__earnings)
+            return [earnings] if len(earnings) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.GENDER:
+            gender = self.__GetTopItem(self.__gender)
+            return [gender] if len(gender) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.HABIT:
+            habit = self.__GetTopItem(self.__habit)
+            return [habit] if len(habit) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.HOBBY:
+            # top 3を選択
+            if len(self.__hobby) == 0:
+                return []
+            sorted_hobby = sorted(self.__hobby.items(), key=lambda x: -x[1])
+            sorted_hobby = sorted_hobby[:3]
+            result: List[str] = []
+            for hobby in sorted_hobby:
+                result.append(hobby[0])
+            return result
+
+        if user_attribute_item == UserAttributeItem.KIND_OF_BUSINESS:
+            kind_of_business = self.__GetTopItem(self.__kind_of_business)
+            return [kind_of_business] if len(kind_of_business) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.KIND_OF_OCCUPATION:
+            kind_of_occupation = self.__GetTopItem(self.__kind_of_occupation)
+            return [kind_of_occupation] if len(kind_of_occupation) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.LOCATION:
+            location = self.__GetTopItem(self.__location)
+            return [location] if len(location) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.MOVING:
+            moving = self.__GetTopItem(self.__moving)
+            return [moving] if len(moving) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.OCCUPATION:
+            occupation = self.__GetTopItem(self.__occupation)
+            return [occupation] if len(occupation) != 0 else []
+
+        if user_attribute_item == UserAttributeItem.POSITION:
+            position = self.__GetTopItem(self.__position)
+            return [position] if len(position) != 0 else []
 
 
 class CompanyAnalysis:
-    def __init__(self, old_ordinary_income: float, new_ordinary_income: float):
+    def __init__(self, name: str, year: int,
+                 old_net_sales: float, old_operating_income: float, old_ordinary_income: float,
+                 net_sales: float, operating_income: float, ordinary_income: float,
+                 user_attribute: UserAttribute):
         super().__init__()
-        self.ordinary_income_diff = new_ordinary_income - old_ordinary_income
+        self.name = name
+        self.year = year
+        self.old_net_sales = old_net_sales
+        self.old_operating_income = old_operating_income
+        self.old_ordinary_income = old_ordinary_income
+        self.net_sales = net_sales
+        self.operating_income = operating_income
+        self.ordinary_income = ordinary_income
+        self.user_attribute = user_attribute
+        self.ordinary_income_diff = ordinary_income - old_ordinary_income
 
-    def GetOrdinaryIncomeDiff(self) -> float:
-        return self.ordinary_income_diff
+    def ShowOverview(self) -> None:
+        result_text = '---\n'
+        result_text += '### [{0}]\n'.format(self.name)
+        result_text += '総売上　: {0:>7.2f}億円({1}) => {2:>7.2f}億円({3})\n'.format(
+            self.old_net_sales / 100000000, self.year - 1,
+            self.net_sales / 100000000, self.year)
+        result_text += '営業利益: {0:>7.2f}億円({1}) => {2:>7.2f}億円({3}), 営業利益率{4:.2f}%({5}) => {6:.2f}%({7})\n'.format(
+            self.operating_income / 100000000, self.year - 1,
+            self.operating_income / 100000000, self.year,
+            self.old_operating_income / self.old_net_sales * 100, self.year - 1,
+            self.operating_income / self.net_sales * 100, self.year)
+        result_text += '経常利益: {0:>7.2f}億円({1}) => {2:>7.2f}億円({3}), 経常利益率{4:.2f}%({5}) => {6:.2f}%({7})\n\n'.format(
+            self.old_ordinary_income / 100000000, self.year - 1,
+            self.ordinary_income / 100000000, self.year,
+            self.old_ordinary_income / self.old_net_sales * 100, self.year - 1,
+            self.ordinary_income / self.net_sales * 100, self.year)
+        print(result_text)
 
 
-plus_companies: List[CompanyAnalysis] = []
-minus_companies: List[CompanyAnalysis] = []
+def GetDifferences(profittable_companies: List[CompanyAnalysis], unprofittable_companies: List[CompanyAnalysis]):
+    # bin-counting
+    attribute_items: List[UserAttributeItem] = [
+        UserAttributeItem.AGE,
+        UserAttributeItem.CIVILSTATUS,
+        UserAttributeItem.EARNINGS,
+        UserAttributeItem.GENDER,
+        UserAttributeItem.HABIT,
+        UserAttributeItem.HOBBY,
+        UserAttributeItem.KIND_OF_BUSINESS,
+        UserAttributeItem.KIND_OF_OCCUPATION,
+        UserAttributeItem.LOCATION,
+        UserAttributeItem.MOVING,
+        UserAttributeItem.OCCUPATION,
+        UserAttributeItem.POSITION
+    ]
+
+    plus_count: Dict[str, Dict[str, int]] = {}
+    minus_count: Dict[str, Dict[str, int]] = {}
+
+    for attribute_item in attribute_items:
+
+        attribute_item_name = attribute_item.value
+
+        for company in profittable_companies:
+
+            if attribute_item_name not in plus_count:
+                plus_count[attribute_item_name] = {}
+
+            items = company.user_attribute.GetUserAttribute(attribute_item)
+
+            for item in items:
+                if item not in plus_count[attribute_item_name]:
+                    plus_count[attribute_item_name][item] = 0
+                plus_count[attribute_item_name][item] += 1
+
+        for company in unprofittable_companies:
+
+            if attribute_item_name not in minus_count:
+                minus_count[attribute_item_name] = {}
+
+            items = company.user_attribute.GetUserAttribute(attribute_item)
+
+            for item in items:
+                if item not in minus_count[attribute_item_name]:
+                    minus_count[attribute_item_name][item] = 0
+                minus_count[attribute_item_name][item] += 1
+
+    print('Profittable companies: ' + str(len(profittable_companies)))
+    print(plus_count)
+
+    print('Unprofitable companies: ' + str(len(unprofittable_companies)))
+    print(minus_count)
+
+
+def CheckFutureOfCompanies():
+
+    print('\nPromising companies for 2019')
+
+    with open('all_json_2018.json', mode='r', encoding='UTF-8') as f:
+        json_data_2018 = json.load(f)
+
+    for companyName in json_data_2018:
+
+        try:
+            ua2018 = UserAttribute.FromJson(json_data_2018, companyName)
+        except Exception:
+            continue
+
+        earnings2018 = ua2018.GetUserAttribute(UserAttributeItem.EARNINGS)
+        hobby2018 = ua2018.GetUserAttribute(UserAttributeItem.HOBBY)
+        location2018 = ua2018.GetUserAttribute(UserAttributeItem.LOCATION)
+
+        flag = False
+        if '関東' in location2018:
+            if '-1M' in earnings2018 or '1M-3M' in earnings2018:
+                if 'FORTUNE' in hobby2018 and 'SPORT' not in hobby2018:
+                    flag = True
+
+        if not(flag):
+            continue
+
+        print(companyName + ' => ' + str(earnings2018 + hobby2018 + location2018))
+
 
 if __name__ == '__main__':
 
-    ua1 = UserAttribute(
-        {'30-39歳': 0.37100103199174406, '20-29歳': 0.12396800825593396},
-        {'既婚': 0.5058049535603716, '未婚': 0.36661506707946334},
-        {'3M-5M': 0.36119711042311664, '-1M': 0.12319401444788441},
-        {'男性': 0.7381320949432404},
-        {'SMOKING': 0.1385448916408669},
-        {'COOKING': 0.8817079463364293, 'MOVIE': 0.7549019607843138, 'INTERNET': 0.7381320949432404,
-         'FISHING': 0.628482972136223, 'SPORT': 0.6273219814241486, 'GYM': 0.612358101135191,
-         'TRAVEL': 0.3691950464396285, 'TVGAME': 0.36906604747162025, 'STUDY': 0.3618421052631579,
-         'CAMERA': 0.26986584107327144, 'TVDRAMA': 0.26986584107327144, 'COLLECTION': 0.26044891640866874,
-         'FORTUNE': 0.2465170278637771, 'MUSIC': 0.24587203302373584, 'PAINT': 0.24316305469556243,
-         'SHOPPING': 0.23787409700722395, 'GAMBLE': 0.11996904024767802, 'SPORTWATCHING': 0.018962848297213623},
-        {},
-        {},
-        {'関東': 0.12319401444788441, '近畿': 0.11829205366357069},
-        {'WALKING': 0.26986584107327144, 'CAR': 0.12332301341589268, 'NO': 0.018962848297213623},
-        {'会社員': 0.4931630546955625},
-        {}
-    )
+    # Mode Flag
+    # - Data Save Mode: Save company's user attribute to json file
+    # - Data Use Mode:  Use above json file and output the statistics result
+    data_save_mode_flag = False
 
+    # check if data save mode
+    if data_save_mode_flag:
+        companies_json = json.loads('{}')
+
+    # check if data USE mode
+    if not data_save_mode_flag:
+        with open('all_json_2017.json', mode='r', encoding='UTF-8') as f:
+            json_data = json.load(f)
+        profittable_companies: List[CompanyAnalysis] = []
+        unprofittable_companies: List[CompanyAnalysis] = []
+
+    # Get COTOHA
     cotoha_api = GetCotohaApi()
 
+    # data retrieving
     years = range(2014, 2018 + 1)
-
     cir: Dict[int, CompanyInformationRepository] = {}
     data_directory = os.path.join(os.path.dirname(__file__), 'data')
     for year in years:
@@ -284,10 +449,6 @@ if __name__ == '__main__':
 
     # codes = TopixCore30.Get()
     codes = Nikkei255.Get()
-
-    counter = 0
-    ordinary_diff_incomes: List[float] = []
-    all_json = json.loads('{}')
 
     for code in codes:
         five_digit_code = code * 10  # 本来は銘柄コードは5桁
@@ -299,7 +460,7 @@ if __name__ == '__main__':
                 continue
             infoDict[year] = info
 
-        # const
+        # parameters
         MAX_TEXT_LENGTH = 1000
         TARGET_YEAR = 2018
 
@@ -320,54 +481,40 @@ if __name__ == '__main__':
             continue
         if IsInvalid(infoDict[TARGET_YEAR - 1].ordinary_income):
             continue
-        # if len(infoDict[TARGET_YEAR].business_policy_environment_issue_etc_text) == 0:
-        #     continue
-        # if len(infoDict[TARGET_YEAR - 1].business_policy_environment_issue_etc_text) == 0:
-        #     continue
-        # if len(infoDict[TARGET_YEAR].business_risks_text) == 0:
-        #     continue
-        # if len(infoDict[TARGET_YEAR - 1].business_risks_text) == 0:
-        #     continue
         if len(infoDict[TARGET_YEAR].business_analysis_of_finance_text) == 0 and len(infoDict[TARGET_YEAR].business_management_analysis_text) == 0:
             continue
         if len(infoDict[TARGET_YEAR - 1].business_analysis_of_finance_text) == 0 and len(infoDict[TARGET_YEAR - 1].business_management_analysis_text) == 0:
             continue
 
-        # if len(infoDict[TARGET_YEAR].business_research_and_development_text) == 0:
-        #     continue
+        # save or use
+        if data_save_mode_flag:
+            user_attribute = CheckUserAttribute(infoDict[TARGET_YEAR - 1].business_management_analysis_text + infoDict[TARGET_YEAR - 1].business_analysis_of_finance_text, MAX_TEXT_LENGTH)
+            # user_attribute = CheckUserAttribute(infoDict[TARGET_YEAR].business_management_analysis_text + infoDict[TARGET_YEAR].business_analysis_of_finance_text, MAX_TEXT_LENGTH)
+            ua = UserAttribute(*user_attribute)
+            companies_json.update(ua.GetJsonAs(infoDict[TARGET_YEAR].name))
+        else:
+            try:
+                ua = UserAttribute.FromJson(json_data, infoDict[TARGET_YEAR].name)
+            except Exception:
+                continue
+            company = CompanyAnalysis(infoDict[TARGET_YEAR].name, TARGET_YEAR,
+                                      infoDict[TARGET_YEAR - 1].net_sales, infoDict[TARGET_YEAR - 1].operating_income, infoDict[TARGET_YEAR - 1].ordinary_income,
+                                      infoDict[TARGET_YEAR].net_sales, infoDict[TARGET_YEAR].operating_income, infoDict[TARGET_YEAR].ordinary_income, ua)
 
-        # if infoDict[TARGET_YEAR].net_sales < infoDict[TARGET_YEAR - 1].net_sales:
-        #     continue
-        # if infoDict[TARGET_YEAR].ordinary_income < infoDict[TARGET_YEAR - 1].ordinary_income:
-        #     continue
+            earnings = ua.GetUserAttribute(UserAttributeItem.EARNINGS)
+            hobby = ua.GetUserAttribute(UserAttributeItem.HOBBY)
+            location = ua.GetUserAttribute(UserAttributeItem.LOCATION)
 
-        result_text = '---\n'
-        result_text += '### [{0}]\n'.format(infoDict[TARGET_YEAR].name)
-        result_text += '総売上　: {0:>7.2f}億円({1}) => {2:>7.2f}億円({3})\n'.format(
-            infoDict[TARGET_YEAR - 1].net_sales / 100000000, TARGET_YEAR - 1,
-            infoDict[TARGET_YEAR].net_sales / 100000000, TARGET_YEAR)
-        result_text += '営業利益: {0:>7.2f}億円({1}) => {2:>7.2f}億円({3}), 営業利益率{4:.2f}%({5}) => {6:.2f}%({7})\n'.format(
-            infoDict[TARGET_YEAR - 1].operating_income / 100000000, TARGET_YEAR - 1,
-            infoDict[TARGET_YEAR].operating_income / 100000000, TARGET_YEAR,
-            infoDict[TARGET_YEAR - 1].operating_income / infoDict[TARGET_YEAR - 1].net_sales * 100, TARGET_YEAR - 1,
-            infoDict[TARGET_YEAR].operating_income / infoDict[TARGET_YEAR].net_sales * 100, TARGET_YEAR)
-        result_text += '経常利益: {0:>7.2f}億円({1}) => {2:>7.2f}億円({3}), 経常利益率{4:.2f}%({5}) => {6:.2f}%({7})\n\n'.format(
-            infoDict[TARGET_YEAR - 1].ordinary_income / 100000000, TARGET_YEAR - 1,
-            infoDict[TARGET_YEAR].ordinary_income / 100000000, TARGET_YEAR,
-            infoDict[TARGET_YEAR - 1].ordinary_income / infoDict[TARGET_YEAR - 1].net_sales * 100, TARGET_YEAR - 1,
-            infoDict[TARGET_YEAR].ordinary_income / infoDict[TARGET_YEAR].net_sales * 100, TARGET_YEAR)
+            if company.ordinary_income_diff > 0:
+                profittable_companies.append(company)
+            else:
+                unprofittable_companies.append(company)
 
-        counter += 1
-        # print(result_text)
+            # extra
+            # company.ShowOverview()
 
-        ordinary_diff_incomes.append(infoDict[TARGET_YEAR].ordinary_income - infoDict[TARGET_YEAR - 1].ordinary_income)
-
-        user_attribute = CheckUserAttribute(infoDict[TARGET_YEAR - 1].business_management_analysis_text + infoDict[TARGET_YEAR - 1].business_analysis_of_finance_text, MAX_TEXT_LENGTH)
-
-        ua = UserAttribute(*user_attribute)
-        all_json.update(ua.GetJsonAs(infoDict[TARGET_YEAR].name))
-
-    # print(ordinary_diff_incomes)
-    # print(counter)
-
-    UserAttribute.SaveJson(all_json, 'all_json.json')
+    if data_save_mode_flag:
+        UserAttribute.SaveJson(companies_json, 'all_json.json')
+    else:
+        GetDifferences(profittable_companies, unprofittable_companies)
+        CheckFutureOfCompanies()
